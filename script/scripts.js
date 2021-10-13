@@ -32,8 +32,8 @@ L.tileLayer(MAPBOX_API, {
 // })
 
 //creado grupo de capaz para almacenar los marcadores
-let busMarkers = L.layerGroup().addTo(mymap);
-let railMarkers = L.layerGroup().addTo(mymap);
+let busMarkers = L.markerClusterGroup();
+let railMarkers = L.markerClusterGroup();
 
 //funcion para obtener los buses
 const getBus = async () => {
@@ -48,6 +48,7 @@ const getBus = async () => {
     })
     return busses
 }
+
 
 //funcion para obtener los trenes
 const getRail = async () => {
@@ -67,18 +68,41 @@ const getRail = async () => {
 const getAll = async () => {
     busses = await getBus().then(data => data)
     rails = await getRail().then(data => data)
-    for (const bus of busses) {
-        L.marker([bus.latitude, bus.longitude], {icon: redIcon}).bindPopup(`BUS ID: ${bus.id}`).addTo(busMarkers);
-    }
-    for (const rail of rails) {
-        L.marker([rail.latitude, rail.longitude]).bindPopup(`RAIL ID: ${rail.id}`).addTo(railMarkers);
-    }
+    const lametro = [busses, rails]
+    return lametro
 }
 
-//funcion intervalo para limpiar y agregar nuevos marcadores cada 8 sgds
-let intervalId = window.setInterval(() => {
-    busMarkers.clearLayers();
-    railMarkers.clearLayers();
-    getAll().then(data => data)
-    map.addLayer(markers);
-  }, 8000);
+getAll().then(([busses, rails]) => {
+    for (const bus of busses) {
+        busMarkers.addLayer(L.marker([bus.latitude, bus.longitude], {id: bus.id}).bindPopup(`BUS ID: ${bus.id}`));
+    }
+    for (const rail of rails) {
+        railMarkers.addLayer(L.marker([rail.latitude, rail.longitude], {icon: redIcon, id: rail.id}).bindPopup(`RAIL ID: ${rail.id}`));
+    }  
+    // const newBus = busses.sort((a, b) => a.id - b.id)
+    // console.log(newBus)
+
+    // busMarkers.getLayers().sort((a, b) => a.options.id - b.options.id)
+    // console.log(busMarkers.getLayers())
+    mymap.addLayer(busMarkers);
+    mymap.addLayer(railMarkers);
+})
+
+// funcion intervalo para limpiar y agregar nuevos marcadores cada 8 sgds
+window.setInterval(() => {
+    getAll().then(([busses, rails]) => {
+        const newBus = busses.sort((a, b) => a.id - b.id)
+        const newRail = rails.sort((a, b) => a.id - b.id)
+        const newBussesMakers = busMarkers.getLayers().sort((a, b) => a.options.id - b.options.id);
+        const newRailsMakers = railMarkers.getLayers().sort((a, b) => a.options.id - b.options.id);
+        // for (const i in newBussesMakers) {
+        //     let newLatLng = new L.LatLng(newBus[i].latitude, newBus[i].longitude)
+        //     newBussesMakers[i].setLatLng(newLatLng)
+        // }
+
+        for (const i in newRailsMakers) {
+            newRailsMakers[i].setLatLng([newRail[i].latitude, newRail[i].longitude])
+        }  
+    }) 
+    console.log('ejecutado') 
+}, 5000);
